@@ -1,2 +1,3 @@
 # ssats
-simple SAT Solver implemented in Haskell
+
+Program to determine whether a given Boolean formula, represented in Conjunctive Normal Form, can be satisfied.
