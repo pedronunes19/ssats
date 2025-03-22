@@ -35,7 +35,7 @@ findUnitClause (c:cs)
 -- function to trim formula after finding unit clause
 simplifyCNFF :: CNFF -> Literal -> CNFF
 simplifyCNFF cnff lit =
-    let (satisfied, remaining) = partition (elem lit) cnf -- get satisfied clauses
+    let (satisfied, remaining) = partition (elem lit) cnff -- get satisfied clauses
     in map (filter (/= -lit)) remaining  -- remove ¬lit from remaining clauses
 
 unitPropagation :: CNFF -> Assignment -> (CNFF, Assignment)
@@ -44,14 +44,26 @@ unitPropagation cnff assignment =
         Nothing     -> (cnff, assignment)  -- done
         Just lit    -> 
             let newCNFF = simplifyCNFF cnff lit
-                newAssignment = lit : assignment
+                newAssignment = (lit, True) : assignment
             in unitPropagation newCNFF newAssignment  -- recursively propagate
 
 
 
 -- Example
-cnfFormula :: CNF
-cnfFormula = [[1, 2], [-1, 3], [-2, -3]]
+---------------------------------------------------------------------
+cnfFormula :: CNFF
+cnfFormula = [[1], [2, -1], [-2, 3], [4, -3]]
 
 assignment :: Assignment
 assignment = []
+
+main :: IO ()
+main = do
+    let cleanedCNF = removeTautologies (removeDuplicates cnfFormula)
+    let (finalCNFF, finalAssignment) = unitPropagation cleanedCNF assignment
+    putStrLn "Final CNF formula after unit propagation:"
+    print finalCNFF
+    putStrLn "Final Assignments:"
+    print finalAssignment
+
+---------------------------------------------------------------------
