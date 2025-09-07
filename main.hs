@@ -3,7 +3,8 @@
 -- e.g. (a OR b) AND (¬a OR c) <==> [[1, 2], [-1, 3]]
 
 import Data.List (nub, partition)
-import Data.Set (fromList, intersection, empty)
+import Data.Set (fromList, toList, intersection, empty, difference, union)
+import qualified Data.Set as S (map)
 
 type Literal = Int  -- Positive for x, Negative for ¬x
 type Clause = [Literal]  -- A clause is a list of literals
@@ -48,11 +49,31 @@ unitPropagation cnff assignment =
             in unitPropagation newCNFF newAssignment  -- recursively propagate
 
 
+-- function to find pure literal instances
+findPureLiterals :: CNFF -> [Literal]
+findPureLiterals cnff =
+    let allLits = concat cnff
+        pos = fromList [l | l <- allLits, l > 0]
+        neg = fromList [l | l <- allLits, l < 0]
+        purePos = difference pos (S.map negate neg)
+        pureNeg = difference neg (S.map negate pos)
+    in toList (union purePos pureNeg)
+
+pureLiteralElimination :: CNFF -> Assignment -> (CNFF, Assignment)
+pureLiteralElimination cnff assignment =
+    case findPureLiterals cnff of
+        [] -> (cnff, assignment)
+        pureLits ->
+            let newCNFF = filter (not . any (`elem` pureLits)) cnff
+                newAssign = [(lit, lit > 0) | lit <- pureLits] ++ assignment
+            in pureLiteralElimination newCNFF newAssign
+
+
 
 -- Example
 ---------------------------------------------------------------------
 cnfFormula :: CNFF
-cnfFormula = [[1], [2, -1], [-2, 3], [4, -3]]
+cnfFormula = [[1], [2, -1], [3, 4], [-3, 5]]
 
 assignment :: Assignment
 assignment = []
@@ -60,10 +81,13 @@ assignment = []
 main :: IO ()
 main = do
     let cleanedCNF = removeTautologies (removeDuplicates cnfFormula)
-    let (finalCNFF, finalAssignment) = unitPropagation cleanedCNF assignment
+    let (upCNFF, upAssignment) = unitPropagation cleanedCNF assignment
     putStrLn "Final CNF formula after unit propagation:"
-    print finalCNFF
+    print upCNFF
+    let (pleCNFF, pleAssignment) = pureLiteralElimination upCNFF upAssignment
+    putStrLn "Final CNF formula after pure literal elimination:"
+    print pleCNFF
     putStrLn "Final Assignments:"
-    print finalAssignment
+    print pleAssignment
 
 ---------------------------------------------------------------------
